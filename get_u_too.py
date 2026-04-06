@@ -10,24 +10,25 @@ from pytubefix.cli import on_progress;
 def print_helper(): 
     print("Get UToo: youtube cli tool for audio files");
     print("\n-d: change destination folder, default is './out'");
-    print("-s: change source pool file, default is './pool.txt'");
-    print("-m or --mode: change download mode by specifying it:");
-    print("""\t- pool: download audio from source file, default is './pool.txt', 
-change it with -s. This is the default mode.""");
-    print("""\t- playlist: download all video from a specified playlist, each
-link inside the pool file is considered a playlist.""");
-    print("-h or --help: show helper");
+    print("\n-s: change source pool file, default is './pool.txt'");
+    print("\n-m or --mode: change download mode by specifying it:");
+    print("   . pool: download audio from source file, default is './pool.txt', change it with -s. This is the default mode.");
+    print("   . playlist: download all video from a specified playlist, each link inside the pool file is considered a playlist.");
+    print("\n-t or --type: change output type by specifying one of the following:");
+    print("   . mp3: download the video as an mp3 file");
+    print("   . wav: download the video as an wav file")
+    print("\n-h or --help: show helper");
     return;
 
 
-def dump_file(yt: object, dest_dir: str):
+def dump_file(yt: object, dest_dir: str, t: str):
     try:
-        file_name = yt.title+".mp3";
+        file_name = yt.title+"."+t;
         print(f"Searching for {file_name}");
         dest_name = os.path.join(dest_dir, file_name);
         main_stream = yt.streams[0].url;
         print("Downloading audio file, please wait ...");
-        ffmpeg.input(main_stream).output(dest_name ,format="mp3", loglevel="error").run();
+        ffmpeg.input(main_stream).output(dest_name ,format=t, loglevel="error").run();
         print("Done!");
     except Exception as ex:
         raise ex;
@@ -39,7 +40,9 @@ def main(argv: [str]):
     file_stream: object;
 
     mode: set = set(["pool", "playlist"]);
+    output_type: set = set(["mp3", "wav"]);
     current_mode: str = "pool";
+    current_type: str = "mp3";
 
     if len(argv) > 1:
         i: int = 1;
@@ -70,6 +73,17 @@ def main(argv: [str]):
                     else:
                         print("The selected one is not a valid mode");
                         exit(1);
+            elif argv[i] == "-t" or argv[i] == "--type":
+                if i+1 >= len(argv):
+                    print("Missing output type, if not specified it would be 'mp3'");
+                    exit(1);
+                else:
+                    if argv[i+1] in output_type:
+                        current_type = argv[i+1];
+                        i += 1;
+                    else:
+                        print("The selected output type is not one of the usable one, -h for more information");
+                        exit(1);
             elif argv[i] == "-h" or argv[i] == "--help":
                 print_helper();
                 exit(0);
@@ -93,10 +107,10 @@ def main(argv: [str]):
                     yt = pytubefix.Playlist(line);
                     print(f"Entering playlist mode, downloading content from '{yt.title}'");
                     for v in yt.videos:
-                        dump_file(v, dest_dir);
+                        dump_file(v, dest_dir, current_type);
                 else:
                     yt = pytubefix.YouTube(line);
-                    dump_file(yt, dest_dir);
+                    dump_file(yt, dest_dir, current_type);
         file_stream.close();
     except Exception as ex:
         print(f"Unable to continue due to: {ex}");

@@ -8,6 +8,5 @@ be placed inside a single destination folder in the current execution point.
 The file "pool.txt" is the one who contain YouTube's URLs, it can also contain comments for user 
 only purposes. It's only possible to have one URL for each line. 
 
-It's possible to specify custom flags to change source file and/or destination folder for the script. 
-For more informations you can invoke the script with "-h" or "--help" flag.
-
+To see more option, to know how to download playlists or more you can invoke the script with "-h" 
+or "--help" and search for what you need.
