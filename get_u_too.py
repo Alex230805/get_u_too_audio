@@ -25,6 +25,7 @@ def dump_file(yt: object, dest_dir: str, t: str):
     try:
         file_name = yt.title+"."+t;
         file_name = re.sub("/", " - ", file_name);
+        file_name = re.sub(":", ", ", file_name);
         print(f"Searching for {file_name}");
         dest_name = os.path.join(dest_dir, file_name);
         if os.path.isfile(dest_name):
