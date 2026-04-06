@@ -1,1 +1,2 @@
-# insert the desired URLs down here
+# insert the desired URLs down here, it can be a playlist or a video url depending on the mode.
+# invoke the tool with -h or --help for more informations
