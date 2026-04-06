@@ -3,7 +3,6 @@ import pytubefix;
 import sys;
 import os;
 import ffmpeg;
-import asyncio;
 
 from pytubefix.cli import on_progress;
 
