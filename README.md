@@ -1,4 +1,4 @@
-# Get You Too: a easy to use script for downloading youtube videos as audio files
+# Get UToo: youtube cli tool for downloading audio files from a specified list
 
 
 This is a python script designed to accept a list of URLs and download it content  in 
@@ -7,4 +7,7 @@ be placed inside a single destination folder in the current execution point.
 
 The file "pool.txt" is the one who contain YouTube's URLs, it can also contain comments for user 
 only purposes. It's only possible to have one URL for each line. 
+
+It's possible to specify custom flags to change source file and/or destination folder for the script. 
+For more informations you can invoke the script with "-h" or "--help" flag.
 
