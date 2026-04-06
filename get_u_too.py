@@ -22,21 +22,18 @@ def print_helper():
 
 
 def dump_file(yt: object, dest_dir: str, t: str):
-    try:
-        file_name = yt.title+"."+t;
-        file_name = re.sub("/", " - ", file_name);
-        file_name = re.sub(":", ", ", file_name);
-        print(f"Searching for {file_name}");
-        dest_name = os.path.join(dest_dir, file_name);
-        if os.path.isfile(dest_name):
-            print("File already present, ignoring it ..");
-            return;
-        main_stream = yt.streams[0].url;
-        print("Downloading audio file, please wait ...");
-        ffmpeg.input(main_stream).output(dest_name ,format=t, loglevel="error").run();
-        print("Done!");
-    except Exception as ex:
-        raise ex;
+    file_name = yt.title+"."+t;
+    file_name = re.sub("/", " - ", file_name);
+    file_name = re.sub(":", ", ", file_name);
+    print(f"Searching for {file_name}");
+    dest_name = os.path.join(dest_dir, file_name);
+    if os.path.isfile(dest_name):
+        print("File already present, ignoring it ..");
+        return;
+    main_stream = yt.streams[0].url;
+    print("Downloading audio file, please wait ...");
+    ffmpeg.input(main_stream).output(dest_name ,format=t, loglevel="error").run();
+    print("Done!");
     return;
 
 def main(argv: [str]):
@@ -96,31 +93,27 @@ def main(argv: [str]):
                 print_helper();
                 exit(1);
             i+= 1;
-    try:
-        if not os.path.isfile(url_list):
-            raise Exception(f"Missing url file list, you must create a file named {url_list} and add some URLs inside");
-        if not os.path.isdir(dest_dir):
-            print("Default destination folder not present, creating it right now");
-            os.mkdir(dest_dir);
-
-        file_stream = open(url_list, "r");
-        for line in file_stream:
-            if len(line) > 0 and not line[0] == '#':
-                yt: object;
-                if current_mode == "playlist":
-                    # downloading content inside a playlist
-                    yt = pytubefix.Playlist(line);
-                    print(f"Entering playlist mode, downloading content from '{yt.title}'");
-                    for v in yt.videos:
-                        dump_file(v, dest_dir, current_type);
-                else:
-                    yt = pytubefix.YouTube(line);
-                    dump_file(yt, dest_dir, current_type);
-        file_stream.close();
-    except Exception as ex:
-        print(f"Unable to continue due to: {ex}");
+    if not os.path.isfile(url_list):
+        print(f"Missing url file list, you must create a file named {url_list} and add some URLs inside");
         exit(1);
-    return 0;
+    if not os.path.isdir(dest_dir):
+        print("Default destination folder not present, creating it right now");
+        os.mkdir(dest_dir);
 
+    file_stream = open(url_list, "r");
+    for line in file_stream:
+        if len(line) > 0 and not line[0] == '#':
+            yt: object;
+            if current_mode == "playlist":
+                # downloading content inside a playlist
+                yt = pytubefix.Playlist(line);
+                print(f"Entering playlist mode, downloading content from '{yt.title}'");
+                for v in yt.videos:
+                    dump_file(v, dest_dir, current_type);
+            else:
+                yt = pytubefix.YouTube(line);
+                dump_file(yt, dest_dir, current_type);
+    file_stream.close();
+    return 0;
 
 main(sys.argv);
