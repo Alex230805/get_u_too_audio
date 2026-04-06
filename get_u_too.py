@@ -3,6 +3,7 @@ import pytubefix;
 import sys;
 import os;
 import ffmpeg;
+import re;
 
 from pytubefix.cli import on_progress;
 
@@ -23,7 +24,9 @@ def print_helper():
 def dump_file(yt: object, dest_dir: str, t: str):
     try:
         file_name = yt.title+"."+t;
+        file_name = re.sub("/", " - ", file_name);
         print(f"Searching for {file_name}");
+
         dest_name = os.path.join(dest_dir, file_name);
         main_stream = yt.streams[0].url;
         print("Downloading audio file, please wait ...");
