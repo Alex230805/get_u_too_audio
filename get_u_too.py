@@ -5,8 +5,6 @@ import os;
 import ffmpeg;
 import re;
 
-from pytubefix.cli import on_progress;
-
 def print_helper(): 
     print("Get UToo: youtube cli tool for audio files");
     print("\n-d: change destination folder, default is './out'");
@@ -15,13 +13,15 @@ def print_helper():
     print("   . pool: download audio from source file, default is './pool.txt', change it with -s. This is the default mode.");
     print("   . playlist: download all video from a specified playlist, each link inside the pool file is considered a playlist.");
     print("\n-t or --type: change output type by specifying one of the following:");
-    print("   . mp3: download the video as an mp3 file");
-    print("   . wav: download the video as an wav file")
+    print("   . mp3");
+    print("   . wav");
+    print("   . flac");
+    print("\n-r or --repeat-after-error: max amount of time one download can fail. Default is 5");
     print("\n-h or --help: show helper");
     return;
 
 
-def dump_file(yt: object, dest_dir: str, t: str):
+def dump_file(yt: object, dest_dir: str, t: str) -> int:
     file_name = yt.title+"."+t;
     file_name = re.sub("/", " - ", file_name);
     file_name = re.sub(":", ", ", file_name);
@@ -29,12 +29,17 @@ def dump_file(yt: object, dest_dir: str, t: str):
     dest_name = os.path.join(dest_dir, file_name);
     if os.path.isfile(dest_name):
         print("File already present, ignoring it ..");
-        return;
+        return 0;
     main_stream = yt.streams[0].url;
     print("Downloading audio file, please wait ...");
-    ffmpeg.input(main_stream).output(dest_name ,format=t, loglevel="error").run();
+    try:
+        ffmpeg.input(main_stream).output(dest_name ,format=t, loglevel="error").run();
+    except Exception as ex:
+        print(f"An erro during the download phase occurred: {ex}");
+        os.remove(dest_name);
+        return 1;
     print("Done!");
-    return;
+    return 0;
 
 def main(argv: [str]):
     url_list: str = "./pool.txt";
@@ -42,9 +47,10 @@ def main(argv: [str]):
     file_stream: object;
 
     mode: set = set(["pool", "playlist"]);
-    output_type: set = set(["mp3", "wav"]);
+    output_type: set = set(["mp3", "wav", "flac"]);
     current_mode: str = "pool";
     current_type: str = "mp3";
+    try_limit: int = 5; # if the server fail to download, it will try again until the limit is reached
 
     if len(argv) > 1:
         i: int = 1;
@@ -86,6 +92,16 @@ def main(argv: [str]):
                     else:
                         print("The selected output type is not one of the usable one, -h for more information");
                         exit(1);
+            elif argv[i] == "-r" or argv[i] == "--repeat-after-error":
+                if i+1 >= len(argv):
+                    print("Missing max fail value");
+                else:
+                    try:
+                       try_limit = int(argv[i+1]);
+                       i += 1;
+                    except: 
+                        print("Not a valid number for the max fail value");
+                        exit(1);
             elif argv[i] == "-h" or argv[i] == "--help":
                 print_helper();
                 exit(0);
@@ -109,10 +125,20 @@ def main(argv: [str]):
                 yt = pytubefix.Playlist(line);
                 print(f"Entering playlist mode, downloading content from '{yt.title}'");
                 for v in yt.videos:
-                    dump_file(v, dest_dir, current_type);
+                    i: int = 0;
+                    while i < try_limit:
+                        if dump_file(v, dest_dir, current_type) == 0:
+                            i = try_limit;
+                        else:
+                            i += 1;
             else:
                 yt = pytubefix.YouTube(line);
-                dump_file(yt, dest_dir, current_type);
+                i: int = 0;
+                while i < try_limit:
+                    if dump_file(yt, dest_dir, current_type) == 0:
+                        i = try_limit;
+                    else:
+                        i += 1;
     file_stream.close();
     return 0;
 
