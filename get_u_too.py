@@ -36,7 +36,8 @@ def dump_file(yt: object, dest_dir: str, t: str) -> int:
         ffmpeg.input(main_stream).output(dest_name ,format=t, loglevel="error").run();
     except Exception as ex:
         print(f"An erro during the download phase occurred: {ex}");
-        os.remove(dest_name);
+        if os.path.isfile(dest_name):
+            os.remove(dest_name);
         return 1;
     print("Done!");
     return 0;
