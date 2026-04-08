@@ -22,25 +22,41 @@ def print_helper():
 
 
 def dump_file(yt: object, dest_dir: str, t: str) -> int:
+    sys.stdout.flush();
     file_name = yt.title+"."+t;
     file_name = re.sub("/", " - ", file_name);
     file_name = re.sub(":", ", ", file_name);
-    print(f"Searching for {file_name}");
+    #print(f"Searching for {file_name}");
     dest_name = os.path.join(dest_dir, file_name);
     if os.path.isfile(dest_name):
-        print("File already present, ignoring it ..");
+        #print("File already present, ignoring it ..");
         return 0;
     main_stream = yt.streams[0].url;
-    print("Downloading audio file, please wait ...");
+    #print("Downloading audio file, please wait ...");
     try:
         ffmpeg.input(main_stream).output(dest_name ,format=t, loglevel="error").run();
     except Exception as ex:
-        print(f"An erro during the download phase occurred: {ex}");
+        #print(f"An erro during the download phase occurred: {ex}");
         if os.path.isfile(dest_name):
             os.remove(dest_name);
         return 1;
-    print("Done!");
+   # print("Done!");
+    sys.stdout.flush();
     return 0;
+
+def deploy_bar(count: int, length: int, resolutions: int, title: str):
+    print(f"\033[2K\033[4;36mCurrently downloading '{title}'\n\n\033[0m".ljust(length));
+    bar = f"\033[0;32m";
+    sub = int(length/resolutions);
+    i: int = 0;
+    while i < count:
+        bar += "-"*sub;
+        i += 1;
+    bar += f">\033[0m";
+    print(f"\033[F[{bar.ljust(length+1)}] \033[1;33m{count}\033[0m of \033[1;31m{resolutions}\033[0m");
+    sys.stdout.flush();
+    return;
+
 
 def main(argv: [str]):
     url_list: str = "./pool.txt";
@@ -52,6 +68,7 @@ def main(argv: [str]):
     current_mode: str = "pool";
     current_type: str = "mp3";
     try_limit: int = 5; # if the server fail to download, it will try again until the limit is reached
+    default_bar_length: int = 100;
 
     if len(argv) > 1:
         i: int = 1;
@@ -118,29 +135,40 @@ def main(argv: [str]):
         os.mkdir(dest_dir);
 
     file_stream = open(url_list, "r");
+    local_file: [str] = [];
     for line in file_stream:
-        if len(line) > 0 and not line[0] == '#':
-            yt: object;
-            if current_mode == "playlist":
-                # downloading content inside a playlist
-                yt = pytubefix.Playlist(line);
-                print(f"Entering playlist mode, downloading content from '{yt.title}'");
-                for v in yt.videos:
-                    i: int = 0;
-                    while i < try_limit:
-                        if dump_file(v, dest_dir, current_type) == 0:
-                            i = try_limit;
-                        else:
-                            i += 1;
-            else:
-                yt = pytubefix.YouTube(line);
+        if line[0] != "#":
+            local_file.append(line);
+    file_stream.close();
+
+    for c,line in enumerate(local_file):
+        yt: object;
+        if current_mode == "playlist":
+            # downloading content inside a playlist
+            yt = pytubefix.Playlist(line);
+            print(f"Entering playlist mode, downloading content from '{yt.title}'");
+            for tr, v in enumerate(yt.videos):
                 i: int = 0;
+                deploy_bar(tr+1, default_bar_length, len(yt.videos), v.title);
                 while i < try_limit:
-                    if dump_file(yt, dest_dir, current_type) == 0:
+                    if dump_file(v, dest_dir, current_type) == 0:
                         i = try_limit;
                     else:
                         i += 1;
-    file_stream.close();
+                print("\033[F\033[F\033[F\033[F");
+            print("\n\n\n");
+        else:
+            yt = pytubefix.YouTube(line);
+            deploy_bar(c+1, default_bar_length, len(local_file), yt.title);
+            i: int = 0;
+            while i < try_limit:
+                if dump_file(yt, dest_dir, current_type) == 0:
+                    i = try_limit;
+                else:
+                    i += 1;
+            print("\033[F\033[F\033[F\033[F");
+    print("\n\n\n");
+    print("Done, Coffie is ready sir ~ !");
     return 0;
 
 main(sys.argv);
