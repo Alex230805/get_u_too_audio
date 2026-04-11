@@ -152,11 +152,16 @@ def main(argv: [str]):
             if current_mode == "playlist":
                 # downloading content inside a playlist
                 yt = pytubefix.Playlist(line);
+                sub_path: str = os.path.join(dest_dir, yt.title);
+                print(f"Downloading playlist '{yt.title}'");
+                if not os.path.isdir(sub_path):
+                    print(f"Creating subpath for {yt.title}");
+                    os.mkdir(sub_path);
                 for tr, v in enumerate(yt.videos):
                     i: int = 0;
                     draw_bar(tr+1, default_bar_length, len(yt.videos), v.title);
                     while i < try_limit:
-                        if dump_file(v, dest_dir, current_type) == 0:
+                        if dump_file(v, sub_path, current_type) == 0:
                             i = try_limit;
                         else:
                             i += 1;
