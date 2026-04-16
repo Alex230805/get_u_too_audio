@@ -4,6 +4,7 @@ import sys;
 import os;
 import ffmpeg;
 import re;
+import asyncio;
 
 def print_helper(): 
     print("Get UToo: youtube cli tool for audio files");
@@ -17,30 +18,32 @@ def print_helper():
     print("   . wav");
     print("   . flac");
     print("\n-r or --repeat-after-error: max amount of time one download can fail. Default is 5");
+    print("\n-auth: enable device authentication for age restricted contents");
     print("\n-h or --help: show helper");
     return;
 
 
-def dump_file(yt: object, dest_dir: str, t: str) -> int:
+async def dump_file(yt: object, dest_dir: str, t: str) -> int:
     sys.stdout.flush();
     file_name = yt.title+"."+t;
     file_name = re.sub("/", " - ", file_name);
     file_name = re.sub(":", ", ", file_name);
-    #print(f"Searching for {file_name}");
     dest_name = os.path.join(dest_dir, file_name);
     if os.path.isfile(dest_name):
-        #print("File already present, ignoring it ..");
         return 0;
-    main_stream = yt.streams[0].url;
-    #print("Downloading audio file, please wait ...");
+    
+    try:
+        main_stream = yt.streams[0].url;
+    except Exception as ex:
+        return 1;
+
     try:
         ffmpeg.input(main_stream).output(dest_name ,format=t, loglevel="error").run();
+        #print(f"{main_stream}");
     except Exception as ex:
-        #print(f"An erro during the download phase occurred: {ex}");
         if os.path.isfile(dest_name):
             os.remove(dest_name);
         return 1;
-   # print("Done!");
     sys.stdout.flush();
     return 0;
 
@@ -62,7 +65,7 @@ def set_cursor(lineup: int):
     print(f"\033[{lineup}F", end="");
     return;
 
-def main(argv: [str]):
+async def main(argv: [str]):
     try:
         url_list: str = "./pool.txt";
         dest_dir: str = "./out";
@@ -74,6 +77,7 @@ def main(argv: [str]):
         current_type: str = "mp3";
         try_limit: int = 5; # if the server fail to download, it will try again until the limit is reached
         default_bar_length: int = 100;
+        auth:bool = False;
 
         if len(argv) > 1:
             i: int = 1;
@@ -125,6 +129,8 @@ def main(argv: [str]):
                         except: 
                             print("Not a valid number for the max fail value");
                             exit(1);
+                elif argv[i] == "-auth":
+                    auth = True;
                 elif argv[i] == "-h" or argv[i] == "--help":
                     print_helper();
                     exit(0);
@@ -151,7 +157,11 @@ def main(argv: [str]):
             yt: object;
             if current_mode == "playlist":
                 # downloading content inside a playlist
-                yt = pytubefix.Playlist(line);
+                if auth:
+                    yt = pytubefix.Playlist(line, use_oauth=True, allow_oauth_cache=True);
+                else:
+                    yt = pytubefix.Playlist(line);
+
                 sub_path: str = os.path.join(dest_dir, yt.title);
                 print(f"Downloading playlist '{yt.title}'");
                 if not os.path.isdir(sub_path):
@@ -161,18 +171,21 @@ def main(argv: [str]):
                     i: int = 0;
                     draw_bar(tr+1, default_bar_length, len(yt.videos), v.title);
                     while i < try_limit:
-                        if dump_file(v, sub_path, current_type) == 0:
+                        if await dump_file(v, sub_path, current_type) == 0:
                             i = try_limit;
                         else:
                             i += 1;
                     set_cursor(2);
                 print("\n\n\n");
             else:
-                yt = pytubefix.YouTube(line);
+                if auth:
+                    yt = pytubefix.YouTube(line, use_oauth=True, allow_oauth_cache=True);
+                else:
+                    yt = pytubefix.YouTube(line);
                 draw_bar(c+1, default_bar_length, len(local_file), yt.title);
                 i: int = 0;
                 while i < try_limit:
-                    if dump_file(yt, dest_dir, current_type) == 0:
+                    if await dump_file(yt, dest_dir, current_type) == 0:
                         i = try_limit;
                     else:
                         i += 1;
@@ -182,9 +195,10 @@ def main(argv: [str]):
     except KeyboardInterrupt as interrupt:
         print("\nForce exit\n");
         sys.exit(1);
-    except Exception as ex:
-        print(f"Unable to continue due to {ex}");
-        exit(1);
+    #except Exception as ex:
+    #    print(f"\nUnable to continue due to {ex}");
+    #    exit(1);
     return 0;
 
-main(sys.argv);
+
+asyncio.run(main(sys.argv));
